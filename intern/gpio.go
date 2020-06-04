@@ -4,34 +4,63 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	"time"
 )
+
+//var debuggpio = true
 
 const gpiodir = "/sys/class/gpio"
 
+//func init() {
+//	err := syscall.Setfsgid(999)
+//	if err != nil {
+//		panic(err)
+//	}
+
+//}
+
+var exportsleeptime = time.Duration(20) * time.Millisecond
+
+//SetExportSleepTimeMS when doing export it takes time for the os to export the file information.  So, there needs to be a little bit
+//of sleep time so the os can catch up.  The default is set to 20 ms but this function allows you to change the time if need be.
+func SetExportSleepTimeMS(nmilliseconds uint64) {
+	exportsleeptime = time.Duration(nmilliseconds) * time.Millisecond
+}
+
 //Export exports pin
 func Export(gpio uint32) error {
-	file, err := os.OpenFile(gpiodir+"/export", os.O_WRONLY, os.ModePerm)
-	defer file.Close()
-	if err != nil {
-		return err
-	}
 
-	_, err = fmt.Fprintf(file, "%d", gpio)
+	file, err := syscall.Open(gpiodir+"/export", os.O_WRONLY, 777)
+	defer syscall.Close(file)
+	//file, err := os.OpenFile(gpiodir+"/export", os.O_WRONLY, os.ModePerm)
+	//	defer file.Close()
 	if err != nil {
 		return err
 	}
+	_, err = syscall.Write(file, []byte(fmt.Sprintf("%d", gpio)))
+
+	//_, err = fmt.Fprintf(file, "%d", gpio)
+	if err != nil {
+		return err
+	}
+	//syscall.Getuid()
+	time.Sleep(exportsleeptime)
 	return nil
 }
 
 //Unexport removes the pin
 func Unexport(gpio uint32) error {
-	file, err := os.OpenFile(gpiodir+"/unexport", os.O_WRONLY, os.ModePerm)
-	defer file.Close()
+
+	file, err := syscall.Open(gpiodir+"/unexport", os.O_WRONLY, 777)
+	defer syscall.Close(file)
+	//file, err := os.OpenFile(gpiodir+"/unexport", os.O_WRONLY, os.ModePerm)
+	//defer file.Close()
 	if err != nil {
 		return err
 	}
 
-	_, err = fmt.Fprintf(file, "%d", gpio)
+	_, err = syscall.Write(file, []byte(fmt.Sprintf("%d", gpio)))
+	//	_, err = fmt.Fprintf(file, "%d", gpio)
 	if err != nil {
 		return err
 	}
@@ -40,44 +69,68 @@ func Unexport(gpio uint32) error {
 
 //Setdirection sets if the pin is an input or output
 func Setdirection(gpio uint32, outflag bool) error {
-	file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/direction", gpiodir, gpio), os.O_WRONLY, os.ModePerm)
-	defer file.Close()
+
+	//file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/direction", gpiodir, gpio), os.O_WRONLY, os.ModePerm)
+	//defer file.Close()
+
+	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/direction", gpiodir, gpio), os.O_WRONLY, 0777)
+	defer syscall.Close(file)
 	if err != nil {
+		fmt.Println("Error In opening file direction")
 		return err
 	}
 	if outflag {
-		file.Write([]byte("out"))
+		_, err = syscall.Write(file, []byte("out"))
+		//_, err = file.Write([]byte("out"))
+
 	} else {
-		file.Write([]byte("in"))
+		_, err = syscall.Write(file, []byte("in"))
+
+		//_, err = file.Write([]byte("in"))
+
 	}
-	return nil
+	return err
 }
 
 //Setvalue sets the value for gpio
 func Setvalue(gpio uint32, high bool) error {
-	file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/value", gpiodir, gpio), os.O_WRONLY, os.ModePerm)
-	defer file.Close()
+	//	file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/value", gpiodir, gpio), os.O_WRONLY, os.ModePerm)
+	//	defer file.Close()
+	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/value", gpiodir, gpio), os.O_WRONLY, 0777)
+	defer syscall.Close(file)
 	if err != nil {
+		fmt.Println("Set Value: Error in opening file ")
 		return err
 	}
 	if high {
-		file.Write([]byte("1"))
+		_, err = syscall.Write(file, []byte("1"))
+		//	_, err = file.Write([]byte("1"))
+		if err != nil {
+			return err
+		}
 	} else {
-		file.Write([]byte("0"))
+		_, err = syscall.Write(file, []byte("0"))
+
+		//	_, err = file.Write([]byte("0"))
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 //Getvalue gets the value for gpuio
 func Getvalue(gpio uint32) (high bool, err error) {
-	file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/value", gpiodir, gpio), os.O_RDONLY, os.ModePerm)
-	defer file.Close()
+	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/value", gpiodir, gpio), os.O_RDONLY, 0777)
+	defer syscall.Close(file)
+	//	file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/value", gpiodir, gpio), os.O_RDONLY, os.ModePerm)
+	//	defer file.Close()
 	if err != nil {
 		return false, err
 	}
 	val := make([]byte, 1)
-
-	_, err = file.Read(val)
+	_, err = syscall.Read(file, val)
+	//_, err = file.Read(val)
 	if err != nil {
 		return false, err
 	}
@@ -92,14 +145,15 @@ func Getvalue(gpio uint32) (high bool, err error) {
 
 //Setedge sets the edge of the pin
 func Setedge(gpio uint32, edge Edge) error {
-
-	file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/edge", gpiodir, gpio), os.O_WRONLY, os.ModePerm)
-	defer file.Close()
+	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/edge", gpiodir, gpio), os.O_WRONLY, 0777)
+	defer syscall.Close(file)
+	//file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/edge", gpiodir, gpio), os.O_WRONLY, os.ModePerm)
+	//defer file.Close()
 	if err != nil {
 		return err
 	}
-
-	_, err = file.Write([]byte(edge.val))
+	_, err = syscall.Write(file, []byte(edge.val))
+	//_, err = file.Write([]byte(edge.val))
 
 	return err
 }

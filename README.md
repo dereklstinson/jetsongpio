@@ -1,7 +1,8 @@
 # JetsonGPIO
 Jetson GPIO for Go
 
-This is not working yet.
+Well, right now all I have is the intern subpackage made, and it finally works without super user permissions.  YAY!  I would like to eventually build this
+around I think it is called /dev/mem.   It will make accessing the pins super fast.  
 
 ## Prep Steps
 
@@ -12,10 +13,12 @@ sudo groupadd -f -r gpio
 sudo usermod -a -G gpio your_user_name
 ```
 
-Copy 99-gpio.rules into rules.d directory.  Need to be in directory package was installed
+go to setup folder in jetsongpio 
 
-``` 
-sudo cp 99-gpio.rules /etc/udev/rules.d/
+run setup_gpio.sh
+
+```
+./setup_gpio.sh
 ```
 
 Reboot or reload udev rules

@@ -19,15 +19,24 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-SUBSYSTEM=="gpio", KERNEL=="gpiochip*", ACTION=="add", \
-    PROGRAM="/bin/sh -c 'chown root:gpio /sys/class/gpio/export /sys/class/gpio/unexport; chmod 220 /sys/class/gpio/export /sys/class/gpio/unexport'"
-SUBSYSTEM=="gpio", KERNEL=="gpio*", ACTION=="add", \
-    PROGRAM="/bin/sh -c 'chown root:gpio /sys%p/active_low /sys%p/direction /sys%p/edge /sys%p/value; chmod 660 /sys%p/active_low /sys%p/direction /sys%p/edge /sys%p/value'"
 
-SUBSYSTEM=="pwm", KERNEL=="pwmchip*", ACTION=="add", \
-    PROGRAM="/bin/bash -c 'chown root:gpio /sys%p/{,un}export; chmod 220 /sys%p/{,un}export'"
-SUBSYSTEM=="pwm", KERNEL=="pwmchip*", ACTION=="change", \
-    PROGRAM="/bin/bash -c 'chown root:gpio /sys%p/%E{EXPORT}/{period,duty_cycle,enable}; chmod 660 /sys%p/%E{EXPORT}/{period,duty_cycle,enable}'"
+# old rules
+#SUBSYSTEM=="gpio", KERNEL=="gpiochip*", ACTION=="add", \
+#    PROGRAM="/bin/sh -c 'chown root:gpio /sys/class/gpio/export /sys/class/gpio/unexport; chmod 220 /sys/class/gpio/export /sys/class/gpio/unexport'"
+#SUBSYSTEM=="gpio", KERNEL=="gpio*", ACTION=="add", \
+#    PROGRAM="/bin/sh -c 'chown root:gpio /sys%p/active_low /sys%p/direction /sys%p/edge /sys%p/value; chmod 660 /sys%p/active_low /sys%p/direction /sys%p/edge /sys%p/value'"
+#
+#SUBSYSTEM=="pwm", KERNEL=="pwmchip*", ACTION=="add", \
+#    PROGRAM="/bin/bash -c 'chown root:gpio /sys%p/{,un}export; chmod 220 /sys%p/{,un}export'"
+#SUBSYSTEM=="pwm", KERNEL=="pwmchip*", ACTION=="change", \
+#    PROGRAM="/bin/bash -c 'chown root:gpio /sys%p/%E{EXPORT}/{period,duty_cycle,enable}; chmod 660 /sys%p/%E{EXPORT}/{period,duty_cycle,enable}'"
+#
+#SUBSYSTEM=="spidev", KERNEL=="spidev*", ACTION=="add", \
+#    GROUP="gpio", MODE="0660"
 
-SUBSYSTEM=="spidev", KERNEL=="spidev*", ACTION=="add", \
-    GROUP="gpio", MODE="0660"
+
+#new rules
+
+# Install as: /etc/udev/rules.d/99-com.rules
+
+KERNEL=="gpio*", SUBSYSTEM=="gpio", ACTION=="add", PROGRAM="/usr/local/bin/udev_gpio.sh"
