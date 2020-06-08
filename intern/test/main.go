@@ -27,23 +27,29 @@ func main() {
 		fmt.Println(err)
 	}
 	fmt.Println("GroupID", groups)
-	err = intern.Export(GPIO)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer intern.Unexport(GPIO)
+	pin79 := intern.CreateGPIO(79, "")
+	err = pin79.Export()
 
-	err = intern.Setdirection(GPIO, true)
 	if err != nil {
 		fmt.Println(err)
+	} else {
+		defer pin79.Unexport()
 	}
 
-	fd, err := intern.Fdopen(GPIO)
+	err = pin79.SetDirection(true)
+
 	if err != nil {
 		fmt.Println(err)
 	}
-	defer intern.Fdclose(fd)
-	ishigh, err := intern.Getvalue(GPIO)
+	err = pin79.Enable()
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer pin79.Disable()
+
+	ishigh, err := pin79.GetValue()
+
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -52,11 +58,11 @@ func main() {
 	} else {
 		fmt.Printf("GPIO %d is LOW\n", GPIO)
 	}
-	err = intern.Setvalue(GPIO, true)
+	err = pin79.SetValue(true)
 	if err != nil {
 		fmt.Println(err)
 	}
-	ishigh, err = intern.Getvalue(GPIO)
+	ishigh, err = pin79.GetValue()
 	if err != nil {
 		fmt.Println(err)
 	}

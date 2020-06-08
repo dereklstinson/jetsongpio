@@ -9,7 +9,7 @@ import (
 
 //var debuggpio = true
 
-const gpiodir = "/sys/class/gpio"
+const gpiodirectory = "/sys/class/gpio"
 
 //func init() {
 //	err := syscall.Setfsgid(999)
@@ -18,6 +18,30 @@ const gpiodir = "/sys/class/gpio"
 //	}
 
 //}
+
+//GPIO is a gpio pin
+type GPIO struct {
+	fd        int  //file descriptor
+	p         uint //linux pin number
+	directory string
+	enabled   bool
+}
+
+//CreateGPIO creates a gpio usually the directory is in /sys/class/gpio.  If directory is passed as "" then methods will use
+// /sys/class/gpio.
+func CreateGPIO(linuxpinnum uint, directory string) GPIO {
+	if directory == "" {
+		directory = gpiodirectory
+	}
+	return GPIO{
+		p:         linuxpinnum,
+		directory: directory,
+	}
+}
+
+func (g GPIO) String() string {
+	return fmt.Sprintf("%d", g.p)
+}
 
 var exportsleeptime = time.Duration(20) * time.Millisecond
 
@@ -28,16 +52,16 @@ func SetExportSleepTimeMS(nmilliseconds uint64) {
 }
 
 //Export exports pin
-func Export(gpio uint32) error {
+func (g GPIO) Export() error {
 
-	file, err := syscall.Open(gpiodir+"/export", os.O_WRONLY, 777)
+	file, err := syscall.Open(g.directory+"/export", os.O_WRONLY, 777)
 	defer syscall.Close(file)
-	//file, err := os.OpenFile(gpiodir+"/export", os.O_WRONLY, os.ModePerm)
+	//file, err := os.OpenFile(g.directory+"/export", os.O_WRONLY, os.ModePerm)
 	//	defer file.Close()
 	if err != nil {
 		return err
 	}
-	_, err = syscall.Write(file, []byte(fmt.Sprintf("%d", gpio)))
+	_, err = syscall.Write(file, []byte(fmt.Sprintf("%d", g.p)))
 
 	//_, err = fmt.Fprintf(file, "%d", gpio)
 	if err != nil {
@@ -49,17 +73,17 @@ func Export(gpio uint32) error {
 }
 
 //Unexport removes the pin
-func Unexport(gpio uint32) error {
+func (g GPIO) Unexport() error {
 
-	file, err := syscall.Open(gpiodir+"/unexport", os.O_WRONLY, 777)
+	file, err := syscall.Open(g.directory+"/unexport", os.O_WRONLY, 777)
 	defer syscall.Close(file)
-	//file, err := os.OpenFile(gpiodir+"/unexport", os.O_WRONLY, os.ModePerm)
+	//file, err := os.OpenFile(g.directory+"/unexport", os.O_WRONLY, os.ModePerm)
 	//defer file.Close()
 	if err != nil {
 		return err
 	}
 
-	_, err = syscall.Write(file, []byte(fmt.Sprintf("%d", gpio)))
+	_, err = syscall.Write(file, []byte(fmt.Sprintf("%d", g.p)))
 	//	_, err = fmt.Fprintf(file, "%d", gpio)
 	if err != nil {
 		return err
@@ -67,13 +91,13 @@ func Unexport(gpio uint32) error {
 	return nil
 }
 
-//Setdirection sets if the pin is an input or output
-func Setdirection(gpio uint32, outflag bool) error {
+//SetDirection sets if the pin is an input or output
+func (g GPIO) SetDirection(outflag bool) error {
 
-	//file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/direction", gpiodir, gpio), os.O_WRONLY, os.ModePerm)
+	//file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/direction", g.directory, gpio), os.O_WRONLY, os.ModePerm)
 	//defer file.Close()
 
-	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/direction", gpiodir, gpio), os.O_WRONLY, 0777)
+	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/direction", g.directory, g.p), os.O_WRONLY, 0777)
 	defer syscall.Close(file)
 	if err != nil {
 		fmt.Println("Error In opening file direction")
@@ -92,11 +116,14 @@ func Setdirection(gpio uint32, outflag bool) error {
 	return err
 }
 
-//Setvalue sets the value for gpio
-func Setvalue(gpio uint32, high bool) error {
-	//	file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/value", gpiodir, gpio), os.O_WRONLY, os.ModePerm)
+//SetValue sets the value for gpio true sets it heigh, false sets it low
+func (g GPIO) SetValue(high bool) error {
+	if !g.enabled {
+		return fmt.Errorf("pin %v needs to be enabled", g)
+	}
+	//	file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/value", g.directory, gpio), os.O_WRONLY, os.ModePerm)
 	//	defer file.Close()
-	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/value", gpiodir, gpio), os.O_WRONLY, 0777)
+	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/value", g.directory, g.p), os.O_WRONLY, 0777)
 	defer syscall.Close(file)
 	if err != nil {
 		fmt.Println("Set Value: Error in opening file ")
@@ -119,11 +146,14 @@ func Setvalue(gpio uint32, high bool) error {
 	return nil
 }
 
-//Getvalue gets the value for gpuio
-func Getvalue(gpio uint32) (high bool, err error) {
-	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/value", gpiodir, gpio), os.O_RDONLY, 0777)
+//Getvalue gets the value for gpuio if high is true then it is high. if false then low.
+func (g GPIO) GetValue() (high bool, err error) {
+	if !g.enabled {
+		return false, fmt.Errorf("pin %v needs to be enabled", g)
+	}
+	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/value", g.directory, g.p), os.O_RDONLY, 0777)
 	defer syscall.Close(file)
-	//	file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/value", gpiodir, gpio), os.O_RDONLY, os.ModePerm)
+	//	file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/value", g.directory, gpio), os.O_RDONLY, os.ModePerm)
 	//	defer file.Close()
 	if err != nil {
 		return false, err
@@ -144,10 +174,10 @@ func Getvalue(gpio uint32) (high bool, err error) {
 }
 
 //Setedge sets the edge of the pin
-func Setedge(gpio uint32, edge Edge) error {
-	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/edge", gpiodir, gpio), os.O_WRONLY, 0777)
+func (g GPIO) SetEdge(edge Edge) error {
+	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/edge", g.directory, g.p), os.O_WRONLY, 0777)
 	defer syscall.Close(file)
-	//file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/edge", gpiodir, gpio), os.O_WRONLY, os.ModePerm)
+	//file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/edge", g.directory, gpio), os.O_WRONLY, os.ModePerm)
 	//defer file.Close()
 	if err != nil {
 		return err
@@ -187,13 +217,20 @@ func (e *Edge) Both() Edge {
 	return *e
 }
 
-//Fdopen opens gpio
-func Fdopen(gpio uint32) (fd int, err error) {
-	return syscall.Open(fmt.Sprintf("%s/gpio%d/edge", gpiodir, gpio), syscall.O_RDONLY|syscall.O_NONBLOCK, 0777)
-
+//Enable enables the pin so that programs can read the input or set the output.
+func (g *GPIO) Enable() (err error) {
+	g.fd, err = syscall.Open(fmt.Sprintf("%s/gpio%d/edge", g.directory, g.p), syscall.O_RDONLY|syscall.O_NONBLOCK, 0777)
+	if err == nil {
+		g.enabled = true
+	}
+	return err
 }
 
-//Fdclose closes gpio
-func Fdclose(fd int) error {
-	return syscall.Close(fd)
+//Disable disables the pin from being read or maybe outputed.
+func (g *GPIO) Disable() error {
+	if g.enabled != true {
+		return fmt.Errorf("pin %v not enabled", g)
+	}
+	g.enabled = false
+	return syscall.Close(g.fd)
 }
