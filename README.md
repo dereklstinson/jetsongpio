@@ -1,8 +1,9 @@
 # JetsonGPIO
 Jetson GPIO for Go
 
-Well, right now all I have is the intern subpackage made, and it finally works without super user permissions.  YAY!  I would like to eventually build this
-around I think it is called /dev/mem.   It will make accessing the pins super fast.  
+Use this at your own risk.  If some of the pins are mixed up in the software then bad things could happen.  Not saying that I would do it on purpose, but there is always the chance.  The defs for the pins were pulled from NVIDIA/Jetson-gpio so I think it should be ok for the development boards.  That being said not much is going to be tested, because I am not paid for this.  
+
+Pull requests are welcomed.  So if a bug is found please submit a pull request.  Events are not done yet. I am going to use go channels for that.  I will have examples later.
 
 ## Prep Steps
 
