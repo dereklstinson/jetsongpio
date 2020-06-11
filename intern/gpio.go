@@ -24,7 +24,7 @@ type GPIO struct {
 	fd        int  //file descriptor
 	p         uint //linux pin number
 	directory string
-	enabled   bool
+	//enabled   bool
 }
 
 //CreateGPIO creates a gpio usually the directory is in /sys/class/gpio.  If directory is passed as "" then methods will use
@@ -43,7 +43,7 @@ func (g GPIO) String() string {
 	return fmt.Sprintf("%d", g.p)
 }
 
-var exportsleeptime = time.Duration(20) * time.Millisecond
+var exportsleeptime = time.Duration(30) * time.Millisecond
 
 //SetExportSleepTimeMS when doing export it takes time for the os to export the file information.  So, there needs to be a little bit
 //of sleep time so the os can catch up.  The default is set to 20 ms but this function allows you to change the time if need be.
@@ -118,9 +118,9 @@ func (g GPIO) SetDirection(outflag bool) error {
 
 //SetValue sets the value for gpio true sets it heigh, false sets it low
 func (g GPIO) SetValue(high bool) error {
-	if !g.enabled {
-		return fmt.Errorf("pin %v needs to be enabled", g)
-	}
+	//	if !g.enabled {
+	//		return fmt.Errorf("pin %v needs to be enabled", g)
+	//	}
 	//	file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/value", g.directory, gpio), os.O_WRONLY, os.ModePerm)
 	//	defer file.Close()
 	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/value", g.directory, g.p), os.O_WRONLY, 0777)
@@ -146,11 +146,11 @@ func (g GPIO) SetValue(high bool) error {
 	return nil
 }
 
-//Getvalue gets the value for gpuio if high is true then it is high. if false then low.
+//GetValue gets the value for gpuio if high is true then it is high. if false then low.
 func (g GPIO) GetValue() (high bool, err error) {
-	if !g.enabled {
-		return false, fmt.Errorf("pin %v needs to be enabled", g)
-	}
+	//if !g.enabled {
+	//	return false, fmt.Errorf("pin %v needs to be enabled", g)
+	//}
 	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/value", g.directory, g.p), os.O_RDONLY, 0777)
 	defer syscall.Close(file)
 	//	file, err := os.OpenFile(fmt.Sprintf("%s/gpio%d/value", g.directory, gpio), os.O_RDONLY, os.ModePerm)
@@ -173,7 +173,7 @@ func (g GPIO) GetValue() (high bool, err error) {
 	return high, nil
 }
 
-//Setedge sets the edge of the pin
+//SetEdge sets the edge of the pin
 func (g GPIO) SetEdge(edge Edge) error {
 	file, err := syscall.Open(fmt.Sprintf("%s/gpio%d/edge", g.directory, g.p), os.O_WRONLY, 0777)
 	defer syscall.Close(file)
@@ -220,17 +220,17 @@ func (e *Edge) Both() Edge {
 //Enable enables the pin so that programs can read the input or set the output.
 func (g *GPIO) Enable() (err error) {
 	g.fd, err = syscall.Open(fmt.Sprintf("%s/gpio%d/edge", g.directory, g.p), syscall.O_RDONLY|syscall.O_NONBLOCK, 0777)
-	if err == nil {
-		g.enabled = true
-	}
+	//if err == nil {
+	//	g.enabled = true
+	//}
 	return err
 }
 
 //Disable disables the pin from being read or maybe outputed.
 func (g *GPIO) Disable() error {
-	if g.enabled != true {
-		return fmt.Errorf("pin %v not enabled", g)
-	}
-	g.enabled = false
+	//if g.enabled != true {
+	//	return fmt.Errorf("pin %v not enabled", g)
+	//}
+	//g.enabled = false
 	return syscall.Close(g.fd)
 }

@@ -1,8 +1,10 @@
 package intern
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"strconv"
 	"syscall"
 	"time"
 )
@@ -75,6 +77,26 @@ func (p PWM) SetPeriod(ns uint) error {
 
 	_, err = syscall.Write(file, []byte(fmt.Sprint(ns)))
 	return err
+}
+
+//GetPeriod returns the period.
+//Sometimes the period is already set when it is exported.  You might want to get that
+//info before doing anything.
+func (p PWM) GetPeriod() (ns uint, err error) {
+	file, err := syscall.Open(fmt.Sprintf("%s/pwm%d/period", p.pwmdirectory, p.p), os.O_RDONLY, 0777)
+	defer syscall.Close(file)
+	buffer := make([]byte, 128)
+
+	n, err := syscall.Read(file, buffer)
+	if err != nil {
+		return 0, err
+	}
+	val, err := strconv.Atoi(string(bytes.TrimSpace(buffer[:n])))
+	if err != nil {
+		return 0, err
+	}
+	return uint(val), err
+
 }
 
 //SetDutyCycle sets the duty cycle in ns (nano seconds)

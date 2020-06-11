@@ -18,16 +18,17 @@ type GPIOin struct {
 }
 
 //CreateGPIOin creates a gpiopin if there is an error the pin will not be usable.
-func CreateGPIOin(pin GPIOGlobalDef) (g GPIOin, err error) {
+func CreateGPIOin(pin GPIOGlobalDef) (g *GPIOin, err error) {
 	gpin, err := pin.GPIOGlobal()
 	if err != nil {
 		return
 	}
+	g = new(GPIOin)
 	g.g = intern.CreateGPIO(uint(gpin), "")
 	err = g.g.Export()
 	if err != nil {
 		if err != nil {
-			err = fmt.Errorf("Pin %d already in use.  Export returned %s", gpin, err.Error())
+			err = fmt.Errorf("Warning: Pin Already Exported")
 			return
 		}
 	}
@@ -86,19 +87,20 @@ type GPIOout struct {
 }
 
 //CreateGPIOout creates a GPIOout if there is an error the pin will not be usable.
-func CreateGPIOout(pin GPIOGlobalDef, initial Signal) (g GPIOout, err error) {
+func CreateGPIOout(pin GPIOGlobalDef, initial Signal) (g *GPIOout, err error) {
 	flg := initial
-	if initial != flg.HIGH() || initial != flg.LOW() {
+	if initial != flg.HIGH() && initial != flg.LOW() {
 		return g, errors.New("Initial Signal needs to be High or Low")
 	}
 	gpin, err := pin.GPIOGlobal()
 	if err != nil {
 		return
 	}
+	g = new(GPIOout)
 	g.g = intern.CreateGPIO(uint(gpin), "")
 	err = g.g.Export()
 	if err != nil {
-		err = fmt.Errorf("Pin %d already in use.  Export returned %s", gpin, err.Error())
+		err = fmt.Errorf("Warning: Pin Already Exported")
 		return
 	}
 	err = g.g.SetDirection(true)
@@ -107,14 +109,6 @@ func CreateGPIOout(pin GPIOGlobalDef, initial Signal) (g GPIOout, err error) {
 		fmt.Println(err2)
 		return
 	}
-	if initial == flg.HIGH() {
-		err = g.g.SetValue(true)
-		fmt.Println(err)
-	} else {
-		err = g.g.SetValue(false)
-		fmt.Println(err)
-	}
-
 	err = g.g.Enable()
 	if err != nil {
 		err2 := g.g.SetDirection(false)
@@ -127,6 +121,19 @@ func CreateGPIOout(pin GPIOGlobalDef, initial Signal) (g GPIOout, err error) {
 		}
 
 		return
+	}
+
+	if initial == flg.HIGH() {
+		err = g.g.SetValue(true)
+		if err != nil {
+			fmt.Println(err)
+		}
+	} else {
+		err = g.g.SetValue(false)
+		if err != nil {
+			fmt.Println(err)
+		}
+
 	}
 
 	return
